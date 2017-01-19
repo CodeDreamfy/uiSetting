@@ -2,6 +2,11 @@ const gulp = require('gulp');
 const del = require('del');
 const csswring = require('csswring');
 const cssmqpacker = require('css-mqpacker');
+const browserify = require('browserify');
+const watchify = require('watchify');
+const babelify = require('babelify');
+const source = require('vinyl-source-stream');
+const buffer = require('vinyl-buffer');
 //postcss
 const postcss = require('postcss');
 const _import = require('postcss-import');
@@ -18,16 +23,32 @@ const $ = require('gulp-load-plugins')({
     'gulp-imagemin': 'imagemin',
     'gulp-rename': 'rename',
     'gulp-uglify': 'uglify',
-    'gulp-sourcemaps': 'sourcemaps'
+    'gulp-sourcemaps': 'sourcemaps',
+    'gulp-notify': 'notify',
+    'gulp-changed-in-place': 'changePlace',
+    'gulp-debug': 'debug',
+    'gulp-streamify': 'streamify',
+    'gulp-browserify': 'browserify'
   }
 }); //load gulp-*
 
-gulp.task('clearcss', ()=>{
-  return del(['./css/main.min.css'])
-})
 
-gulp.task('clearjs', ()=>{
-  return del(['./js/main.min.js'])
+gulp.task('browserify', ()=>{
+  del('./dest/js/app.min.js')
+  return browserify({
+          entries: ['./src/js/app.js'],
+          debug: true
+        })
+        .transform('babelify', { presets: ['es2015']})
+        .bundle()
+        .on('error',errorHandler)
+        .pipe(source('app.js'))
+        .pipe(buffer())
+        .pipe($.streamify($.uglify))
+        .pipe($.rename({suffix: '.min'}))
+        .pipe(gulp.dest('./dest/js'))
+        .pipe($.debug({title: 'transform：'}))
+
 })
 
 gulp.task('postcss', ()=>{
@@ -40,29 +61,17 @@ gulp.task('postcss', ()=>{
     }),
     cssmqpacker
   ];
-  return gulp.src('./css/main.css')
+  del('./dest/css/main.min.css');
+  return gulp.src('./src/css/main.css')
+    .pipe($.changePlace())
+    .pipe($.debug({title: 'transform：'}))
     .pipe($._postcss(progresses))
     .on('error', errorHandler)
+    .pipe($.cleancss())
     .pipe($.rename({suffix: '.min'}))
-    .pipe(gulp.dest('./css/'))
+    .pipe(gulp.dest('./dest/css'))
 })
 
-gulp.task('toes5', ['clearjs'], ()=>{
-  return gulp.src('./js/src/**/*.js')
-    .pipe($.concat('main.js'))
-    .pipe($.babel({
-      presets: ['es2015'],
-      plugins: ['transform-runtime']
-    }))
-    .on('error',errorHandler)
-    .pipe($.uglify({
-      preserveComments: 'license'
-    }))
-    .on('error',errorHandler)
-    .pipe($.rename({suffix: '.min'}))
-    .pipe(gulp.dest('./js/'))
-
-})
 
 gulp.task('imgmin', ()=>{
   return gulp.src('./images/**/*')
@@ -72,8 +81,8 @@ gulp.task('imgmin', ()=>{
 
 
 gulp.task('watch', ()=>{
-  gulp.watch('./css/src/**/*.css', ['postcss'])
-  gulp.watch('./js/src/**/*.js', ['toes5'])
+  gulp.watch('./src/css/**/*.css', ['postcss'])
+  gulp.watch('./src/js/**/*.js', ['browserify'])
 })
 
 gulp.task('default', ['watch']);
