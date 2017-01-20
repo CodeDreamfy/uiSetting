@@ -14,6 +14,9 @@ const autoprefixer = require("autoprefixer");
 const nested = require("postcss-nested");
 const cssnext = require('postcss-cssnext');
 
+const browserSync = require('browser-sync').create();
+const reload = browserSync.reload;
+
 const $ = require('gulp-load-plugins')({
   rename: {
     'gulp-postcss': '_postcss',
@@ -32,9 +35,22 @@ const $ = require('gulp-load-plugins')({
   }
 }); //load gulp-*
 
+gulp.task('borwserSync', ()=>{
+  browserSync.init({
+    server: {
+      baseDir: './'
+    }
+  });
+  gulp.watch('./src/css/**/*.css', ['postcss'])
+  gulp.watch('./src/js/**/*.js', ['browserify'])
+  gulp.watch('./dest/*').on('change', reload)
+})
 
+gulp.task('clean:js', ()=>{
+  return del('./dest/js/app.min.js')
+})
 gulp.task('browserify', ()=>{
-  del('./dest/js/app.min.js')
+  
   return browserify({
           entries: ['./src/js/app.js'],
           debug: true
@@ -48,9 +64,12 @@ gulp.task('browserify', ()=>{
         .pipe($.rename({suffix: '.min'}))
         .pipe(gulp.dest('./dest/js'))
         .pipe($.debug({title: 'transform：'}))
+        .pipe(reload({stream: true}));
 
 })
-
+gulp.task('clean:css', ()=>{
+  return del('./dest/css/main.min.js')
+})
 gulp.task('postcss', ()=>{
   let progresses = [
     _import,
@@ -61,8 +80,9 @@ gulp.task('postcss', ()=>{
     }),
     cssmqpacker
   ];
-  del('./dest/css/main.min.css');
-  return gulp.src('./src/css/main.css')
+  
+  return gulp.src('./src/css/**/*.css')
+    .pipe($.concat('main.css'))
     .pipe($.changePlace())
     .pipe($.debug({title: 'transform：'}))
     .pipe($._postcss(progresses))
@@ -70,6 +90,7 @@ gulp.task('postcss', ()=>{
     .pipe($.cleancss())
     .pipe($.rename({suffix: '.min'}))
     .pipe(gulp.dest('./dest/css'))
+    .pipe(reload({stream: true}));
 })
 
 
@@ -80,12 +101,8 @@ gulp.task('imgmin', ()=>{
 })
 
 
-gulp.task('watch', ()=>{
-  gulp.watch('./src/css/**/*.css', ['postcss'])
-  gulp.watch('./src/js/**/*.js', ['browserify'])
-})
 
-gulp.task('default', ['watch']);
+gulp.task('default', ['postcss','browserify','borwserSync']);
 
 
 function errorHandler(error) {
