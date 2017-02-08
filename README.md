@@ -13,3 +13,5 @@ browserify
 http://zhaoda.net/2015/10/16/browserify-guide/
 https://segmentfault.com/a/1190000004141674
 https://github.com/thoughtram/es6-babel-browserify-boilerplate/blob/master/gulpfile.js
+
+https://fettblog.eu/gulp-browserify-multiple-bundles/   gulp + browserify 多个entry
